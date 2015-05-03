@@ -1,0 +1,76 @@
+<link rel="import" href="../bower_components/polymer/polymer.html">
+<link rel="import" href="../bower_components/core-drawer-panel/core-drawer-panel.html">
+<link rel="import" href="../bower_components/core-signals/core-signals.html">
+<link rel="import" href="../bower_components/core-a11y-keys/core-a11y-keys.html">
+
+<link rel="import" href="../bower_components/paper-toast/paper-toast.html">
+
+<link rel="import" href="side_bar.html"/>
+<link rel="import" href="new_profile_panel.html"/>
+<link rel="import" href="edit_profile_panel.html"/>
+<link rel="import" href="observer_panel.html"/>
+
+<polymer-element name="app-main">
+<template>
+    <style>
+        #main {
+            overflow-y: auto;
+        }
+
+        #drawer {
+            background-color: white;
+        }
+    </style>
+
+    <core-drawer-panel id="panel" forceNarrow>
+        <div drawer id="drawer">
+            <side-bar></side-bar>
+        </div>
+        <div main id="main">
+            <observer-panel id="observerPanel"></observer-panel>
+            <new-profile-panel id="newProfilePanel"></new-profile-panel>
+            <edit-profile-panel id="editProfilePanel"></edit-profile-panel>
+        </div>
+    </core-drawer-panel>
+
+    <paper-toast id="toast"></paper-toast>
+
+    <core-signals on-core-signal-to-new-profile-panel="{{toNewProfilePanel}}"></core-signals>
+    <core-signals on-core-signal-to-observer-panel="{{toObserverPanel}}"></core-signals>
+    <core-signals on-core-signal-to-edit-profile-panel="{{toEditProfilePanel}}"></core-signals>
+    <core-signals on-core-signal-toast="{{toast}}"></core-signals>
+
+    <core-a11y-keys target="{{parentElement}}" keys="f5" on-keys-pressed="{{toggleDrawer}}"></core-a11y-keys>
+
+</template>
+<script>
+    Polymer({
+        ready: function() {
+            this.$.newProfilePanel.hidden = true;
+            this.$.editProfilePanel.hidden = true;
+        },
+        toNewProfilePanel: function(e, detail, sender) {
+            this.$.newProfilePanel.hidden = false;
+            this.$.editProfilePanel.hidden = true;
+            this.$.observerPanel.hidden = true;
+        },
+        toEditProfilePanel: function(e, detail, sender) {
+            this.$.newProfilePanel.hidden = true;
+            this.$.editProfilePanel.hidden = false;
+            this.$.observerPanel.hidden = true;
+        },
+        toObserverPanel: function(e, detail, sender) {
+            this.$.newProfilePanel.hidden = true;
+            this.$.editProfilePanel.hidden = true;
+            this.$.observerPanel.hidden = false;
+        },
+        toast: function(e, detail, sender) {
+            this.$.toast.text = detail;
+            this.$.toast.show();
+        },
+        toggleDrawer: function(e, detail, sender) {
+            this.$.panel.togglePanel();
+        }
+    });
+</script>
+</polymer-element>

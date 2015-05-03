@@ -1,0 +1,208 @@
+<link rel="import" href="../bower_components/polymer/polymer.html">
+
+<link rel="import" href="../bower_components/core-header-panel/core-header-panel.html">
+<link rel="import" href="../bower_components/core-animated-pages/core-animated-pages.html">
+<link rel="import" href="../bower_components/core-animated-pages/transitions/slide-from-right.html">
+
+<link rel="import" href="../bower_components/paper-tabs/paper-tabs.html">
+<link rel="import" href="../bower_components/paper-input/paper-input.html">
+<link rel="import" href="../bower_components/paper-button/paper-button.html">
+
+<polymer-element name="new-profile-panel">
+    <template>
+        <style>
+            paper-tabs {
+                background: #424242;
+                color: #fafafa;
+                height: 60px;
+            }
+            paper-tabs::shadow #selectionBar {
+                background-color: #ff4081;
+            }
+            paper-tabs paper-tab::shadow #ink {
+                color: #ff4081;
+                cursor: pointer;
+            }
+            section {
+                padding: 10px;
+                font-size: 18px;
+            }
+
+            .custom /deep/ .floated-label .label-text {
+                color: #424242;
+            }
+            .custom[focused] /deep/ .floated-label .label-text {
+                color: #ff4081;
+            }
+
+            .custom /deep/ .focused-underline {
+                background-color: #ff4081;
+            }
+
+            .custom {
+                color: #212121;
+            }
+
+            paper-button::shadow #ripple {
+                color: #ff4081;
+            }
+
+            .button-section {
+                padding-top: 30px;
+            }
+
+        </style>
+
+        <paper-tabs selected="{{selected}}" id="tabs">
+            <paper-tab role="tab" class="core-selected">Redis</paper-tab>
+            <paper-tab role="tab">Multiple Redis</paper-tab>
+        </paper-tabs>
+
+        <core-animated-pages selected="{{selected}}" transitions="slide-from-right">
+            <section>
+                <div layout center-justified horizontal>
+                    <paper-input class="custom" floatingLabel label="Name" value="{{redis.name}}"></paper-input>
+                </div>
+                <div layout center-justified horizontal>
+                    <paper-input class="custom" floatingLabel label="Host" value="{{redis.host}}"></paper-input>
+                </div>
+                <div layout center-justified horizontal>
+                    <paper-input class="custom" floatingLabel label="Port" value="{{redis.port}}"></paper-input>
+                </div>
+                <div layout center-justified horizontal>
+                    <paper-input class="custom" floatingLabel label="Password" value="{{redis.password}}"></paper-input>
+                </div>
+                <div layout center-justified horizontal>
+                    <paper-input class="custom" floatingLabel label="DB" value="{{redis.db}}"></paper-input>
+                </div>
+                <div layout center-justified horizontal class="button-section">
+                    <paper-button on-click="{{submitRedis}}" raised>OK</paper-button>
+                    <paper-button on-click="{{cancel}}">Cancel</paper-button>
+                </div>
+            </section>
+            <section>
+                <div layout center-justified horizontal>
+                    <paper-input class="custom" floatingLabel label="Name" value="{{multipleRedis.name}}"></paper-input>
+                </div>
+                <div layout center-justified horizontal>
+                    <paper-input class="custom" floatingLabel label="Host" value="{{multipleRedis.host}}"></paper-input>
+                </div>
+                <div layout center-justified horizontal>
+                    <paper-input class="custom" floatingLabel label="From Port" value="{{multipleRedis.fromPort}}"></paper-input>
+                </div>
+                <div layout center-justified horizontal>
+                    <paper-input class="custom" floatingLabel label="To Port" value="{{multipleRedis.toPort}}"></paper-input>
+                </div>
+                <div layout center-justified horizontal>
+                    <paper-input class="custom" floatingLabel label="Password" value="{{multipleRedis.password}}"></paper-input>
+                </div>
+                <div layout center-justified horizontal>
+                    <paper-input class="custom" floatingLabel label="DB" value="{{multipleRedis.db}}"></paper-input>
+                </div>
+                <div layout center-justified horizontal class="button-section">
+                    <paper-button on-click="{{submitMultipleRedis}}" raised>OK</paper-button>
+                    <paper-button on-click="{{cancel}}">Cancel</paper-button>
+                </div>
+            </section>
+        </core-animated-pages>
+
+    </template>
+    <script>
+        Polymer({
+            redis: {},
+            multipleRedis: {},
+            selected: 0,
+            ready: function() {
+            },
+            submitRedis: function() {
+                if (this.redis.name === "" ||
+                    this.redis.host === "" ||
+                    this.redis.port === "" ||
+                    this.redis.db === ""
+                ) {
+                    this.unfinishedToast();
+                    return;
+                }
+
+                IDStore.incr(1).then(function (id) {
+                    var redis = new RedisProfile();
+                    redis.id = id;
+                    redis.name = this.redis.name;
+                    redis.host = this.redis.host;
+                    redis.port = this.redis.port;
+                    redis.password = this.redis.password;
+                    redis.db = this.redis.db;
+                    this.asyncFire("core-signal", {name: "submit-new-profile", data: redis});
+
+                    this.reset();
+                    this.closePanel();
+                }.bind(this));
+            },
+            submitMultipleRedis: function() {
+                var multipleRedis = this.multipleRedis;
+                if (multipleRedis.name === "" ||
+                        multipleRedis.host === "" ||
+                        multipleRedis.fromPort === "" ||
+                        multipleRedis.toPort === "" ||
+                        multipleRedis.db === ""
+                ) {
+                    this.unfinishedToast();
+                    return;
+                }
+
+                var fromPort = parseInt(multipleRedis.fromPort);
+                var toPort = parseInt(multipleRedis.toPort);
+
+                if (fromPort > toPort) {
+                    this.asyncFire("core-signal", {name: "toast", data: "Invalid Port."});
+                    return;
+                }
+
+                var cnt = toPort - fromPort + 1;
+
+                IDStore.incr(cnt).then(function (id) {
+                    var list = [];
+                    for(var i = 0; i < cnt; ++i) {
+                        var redis = new RedisProfile();
+                        var port = fromPort + i;
+                        redis.id = id + i;
+                        redis.name = multipleRedis.name + ':' + port;
+                        redis.host = multipleRedis.host;
+                        redis.port = port;
+                        redis.password = multipleRedis.password;
+                        redis.db = multipleRedis.db;
+
+                        list.push(redis);
+                    }
+                    this.asyncFire("core-signal", {name: "submit-new-profile", data: list});
+                    this.reset();
+                    this.closePanel();
+                }.bind(this));
+            },
+            reset: function() {
+                this.redis.name = '';
+                this.redis.host = '';
+                this.redis.port = '';
+                this.redis.password = '';
+                this.redis.db = '';
+
+                this.multipleRedis.name = '';
+                this.multipleRedis.host = '';
+                this.multipleRedis.fromPort = '';
+                this.multipleRedis.toPort = '';
+                this.multipleRedis.password = '';
+                this.multipleRedis.db = '';
+            },
+            cancel: function() {
+                this.reset();
+                this.closePanel();
+            },
+            closePanel: function () {
+                this.asyncFire("core-signal", {name: "to-observer-panel"});
+            },
+            unfinishedToast: function() {
+                this.asyncFire("core-signal", {name: "toast", data: "Please finish the empty option."});
+            }
+        });
+    </script>
+</polymer-element>

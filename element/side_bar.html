@@ -1,0 +1,223 @@
+<link rel="import" href="../bower_components/polymer/polymer.html">
+<link rel="import" href="../bower_components/core-header-panel/core-header-panel.html">
+<link rel="import" href="../bower_components/core-toolbar/core-toolbar.html">
+<link rel="import" href="../bower_components/core-icon-button/core-icon-button.html">
+<link rel="import" href="../bower_components/core-menu/core-menu.html">
+<link rel="import" href="../bower_components/core-menu/core-submenu.html">
+<link rel="import" href="../bower_components/core-signals/core-signals.html">
+
+<link rel="import" href="../bower_components/paper-button/paper-button.html">
+<link rel="import" href="../bower_components/paper-menu-button/paper-menu-button.html">
+<link rel="import" href="../bower_components/paper-dropdown/paper-dropdown.html">
+<link rel="import" href="../bower_components/paper-item/paper-item.html">
+
+<polymer-element name="side-bar">
+    <template>
+        <style>
+            paper-button {
+                text-transform: none;
+            }
+            core-header-panel {
+                width: 100%;
+                height: 100%;
+            }
+            .core-header {
+                border-right: 1px solid #fafafa;
+            }
+
+            .content {
+                font-size: 16px;
+            }
+            .profile {
+                cursor: pointer;
+            }
+        </style>
+        <style shim-shadowdom>
+            core-toolbar {
+                background-color: #424242;
+                color: #fafafa;
+            }
+
+            core-toolbar.dark-theme {
+                background-color: #212121;
+                color: #f1f1f1;
+                fill: #f1f1f1;
+            }
+
+        </style>
+
+        <core-header-panel>
+            <div class="core-header">
+                <core-toolbar>
+                    <core-icon-button icon="menu">
+                    </core-icon-button>
+                    <span flex>Toolbar</span>
+                    <core-icon-button icon="add" on-click="{{toNewProfilePanel}}"></core-icon-button>
+                </core-toolbar>
+            </div>
+            <div class="content">
+                <core-menu selected="0">
+
+                    <core-submenu icon="folder-open" label="Redis" class="core-selected">
+                        <template repeat="{{profile in profileNodeList}}">
+                            <core-item>
+                                <paper-menu-button>
+                                    <paper-icon-button icon="dns" noink></paper-icon-button>
+                                    <paper-dropdown class="dropdown" layered>
+                                        <core-menu>
+                                            <paper-item noink on-click="{{editProfile}}" data-id="{{profile.id}}">Edit</paper-item>
+                                            <paper-item noink on-click="{{deleteProfile}}">Delete</paper-item>
+                                        </core-menu>
+                                    </paper-dropdown>
+                                </paper-menu-button>
+                                <span class="profile" on-click="{{connect}}" data-id="{{profile.id}}">{{profile.name}}</span>
+                            </core-item>
+                        </template>
+                    </core-submenu>
+
+                    <core-submenu icon="settings" label="SSH" class="">
+                        <core-item label="Favorite 2" horizontal="" center="" layout=""></core-item>
+                        <core-item label="Favorite 3" horizontal="" center="" layout=""></core-item>
+                    </core-submenu>
+
+                </core-menu>
+            </div>
+        </core-header-panel>
+
+        <core-signals on-core-signal-submit-new-profile="{{submitNewProfile}}"></core-signals>
+        <core-signals on-core-signal-submit-edit-profile="{{submitEditProfile}}"></core-signals>
+
+        <core-signals on-core-signal-disconnect="{{disconnect}}"></core-signals>
+
+    </template>
+    <script>
+       Polymer({
+           profileList: new ProfileList(),
+           profileNodeList: [],
+           monitorList: new MonitorList(),
+           ready: function() {
+               ProfileListStore.get().then(function (profileList) {
+                   this.profileList = profileList;
+                   this.profileNodeList = profileList.nodeList();
+               }.bind(this));
+
+               chrome.sockets.tcp.onReceive.addListener(function(info) {
+                   console.log('socketID', info.socketId);
+                   console.log('res length', info.data.byteLength);
+                   var parser = new ReplyParser();
+                   var promise = parser.execute(info.data);
+                   promise.then(function(ret) {
+                       if (ret === "OK") return;
+                       var socketID = info.socketId;
+                       var monitor = this.monitorList.get(socketID);
+                       monitor.append(ret);
+                       console.log('socketID:', info.socketId, ret);
+                   }.bind(this));
+               }.bind(this));
+           },
+           connect: function(e, detail, sender) {
+               var id = sender.dataset.id;
+               var profile = this.profileList.get(id);
+               chrome.sockets.tcp.create({}, function(info) {
+                   var socketID = info.socketId
+                   profile.socketID = socketID;
+                   chrome.sockets.tcp.connect(socketID, profile.host, profile.port, function(result) {
+                       if (chrome.runtime.lastError) {
+                           console.log(chrome.runtime.lastError);
+                           this.asyncFire("core-signal", {name: "toast", data: "Connection to " + profile.name + " Failed"});
+                           return;
+                       }
+                       var resp = this.parseCommand(['monitor']);
+                       var buf = this.str2ab(resp);
+                       chrome.sockets.tcp.send(socketID, buf, function(info) {
+                           console.log('sent:', info);
+
+                           var monitor = new Monitor();
+                           monitor.socketID = socketID;
+                           monitor.profile = profile;
+
+                           this.monitorList.add(monitor);
+                           this.asyncFire('core-signal', {name: 'new-monitor', data: monitor});
+                       }.bind(this));
+                   }.bind(this));
+               }.bind(this));
+           },
+           disconnect: function(e, detail, sender) {
+               var monitor = detail;
+               var socketID = monitor.socketID;
+               chrome.sockets.tcp.disconnect(socketID, function () {
+                   this.monitorList.del(socketID);
+                   console.log(this.monitorList);
+               }.bind(this));
+           },
+           parseCommand: function(list) {
+               const DELIMITER = "\r\n";
+               var header = '*' + list.length + DELIMITER;
+               var cmd = list.shift();
+               header += '$' + cmd.length + DELIMITER;
+               header += cmd + DELIMITER;
+               var body = '';
+               for(var i = 0; i < list.length; ++i) {
+                   var v = list[0];
+                   body += '$' + v.length + DELIMITER;
+                   body += v + DELIMITER;
+               }
+               return header + body;
+           },
+           str2ab: function(str) {
+               var buf = new ArrayBuffer(str.length * 2); // 2 bytes for each char
+               var bufView = new Uint8Array(buf);
+               for (var i = 0, strLen = str.length; i < strLen; ++i) {
+                   bufView[i] = str.charCodeAt(i);
+               }
+               return buf;
+           },
+           ab2str: function(buf) {
+               return String.fromCharCode.apply(null, new Uint8Array(buf));
+           },
+           toNewProfilePanel: function() {
+               this.asyncFire('core-signal', {name: 'to-new-profile-panel', data: null});
+           },
+           refreshNode: function() {
+               this.profileNodeList = this.profileList.nodeList();
+           },
+           submitNewProfile: function(e, detail, sender) {
+               if (Array.isArray(detail)) {
+                   detail.map(function (v) {
+                       this.profileList.add(v);
+                   }.bind(this))
+               } else {
+                   this.profileList.add(detail);
+               }
+
+               ProfileListStore.update(this.profileList).then(function() {
+                   console.log('done save');
+               });
+
+               this.refreshNode();
+           },
+           submitEditProfile: function(e, detail, sender) {
+               ProfileListStore.update(this.profileList).then(function() {
+                   console.log('done edit');
+               });
+
+               this.refreshNode();
+           },
+           deleteProfile: function(e, detail, sender) {
+               var id = sender.dataset.id;
+
+               this.profileList.del(id);
+               ProfileListStore.update(this.profileList).then(function() {
+                   console.log('done delete');
+               });
+
+               this.refreshNode();
+           },
+           editProfile: function(e, detail, sender) {
+               var id = sender.dataset.id;
+
+               this.asyncFire('core-signal', {name: 'to-edit-profile-panel', data: this.profileList.get(id)});
+           }
+       });
+    </script>
+</polymer-element>

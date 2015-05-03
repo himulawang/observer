@@ -1,0 +1,48 @@
+<link rel="import" href="../bower_components/polymer/polymer.html">
+<link rel="import" href="../bower_components/core-signals/core-signals.html">
+
+<link rel="import" href="monitor_matrix.html">
+
+<polymer-element name="observer-panel">
+    <template>
+        <style>
+            section {
+                overflow-y: auto;
+            }
+
+            .monitor {
+                height: 200px;
+                width: 200px;
+                margin: 8px;
+                border: 1px solid #DDDDDD;
+            }
+
+        </style>
+
+        <section>
+            <template repeat="{{monitor in monitorNodeList}}">
+                <monitor-matrix monitor="{{monitor}}"> </monitor-matrix>
+            </template>
+        </section>
+
+        <core-signals on-core-signal-new-monitor="{{newMonitorInit}}"></core-signals>
+        <core-signals on-core-signal-close-monitor="{{closeMonitor}}"></core-signals>
+
+    </template>
+    <script>
+        Polymer({
+            monitorNodeList: [],
+            newMonitorInit: function(e, detail, sender) {
+                var monitor = detail;
+                this.monitorNodeList.push(monitor);
+            },
+            closeMonitor: function(e, detail, sender) {
+                var monitor = detail;
+                var index = this.monitorNodeList.indexOf(detail);
+
+                this.monitorNodeList.splice(index, 1);
+                this.asyncFire('core-signal', {name: "disconnect", data: monitor});
+            }
+        });
+    </script>
+</polymer-element>

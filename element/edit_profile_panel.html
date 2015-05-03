@@ -1,0 +1,158 @@
+<link rel="import" href="../bower_components/polymer/polymer.html">
+
+<link rel="import" href="../bower_components/core-header-panel/core-header-panel.html">
+<link rel="import" href="../bower_components/core-animated-pages/core-animated-pages.html">
+<link rel="import" href="../bower_components/core-animated-pages/transitions/slide-from-right.html">
+
+<link rel="import" href="../bower_components/paper-tabs/paper-tabs.html">
+<link rel="import" href="../bower_components/paper-input/paper-input.html">
+<link rel="import" href="../bower_components/paper-button/paper-button.html">
+
+<polymer-element name="edit-profile-panel">
+    <template>
+        <style>
+            paper-tabs {
+                background: #424242;
+                color: #fafafa;
+                height: 60px;
+            }
+
+            paper-tabs::shadow #selectionBar {
+                background-color: #ff4081;
+            }
+
+            paper-tabs paper-tab::shadow #ink {
+                color: #ff4081;
+                cursor: pointer;
+            }
+
+            section {
+                padding: 10px;
+                font-size: 18px;
+            }
+
+            .custom /deep/ .floated-label .label-text {
+                color: #424242;
+            }
+
+            .custom[focused] /deep/ .floated-label .label-text {
+                color: #ff4081;
+            }
+
+            .custom /deep/ .focused-underline {
+                background-color: #ff4081;
+            }
+
+            .custom {
+                color: #212121;
+            }
+
+            paper-button::shadow #ripple {
+                color: #ff4081;
+            }
+
+            .button-section {
+                padding-top: 30px;
+            }
+
+        </style>
+
+        <paper-tabs selected="{{selected}}" id="tabs">
+            <paper-tab role="tab" class="core-selected">Edit</paper-tab>
+        </paper-tabs>
+
+        <core-animated-pages selected="{{selected}}" transitions="slide-from-right">
+            <section>
+                <div layout center-justified horizontal>
+                    <paper-input class="custom" floatingLabel label="Type" value="{{profile.type}}" disabled></paper-input>
+                </div>
+                <div layout center-justified horizontal>
+                    <paper-input class="custom" floatingLabel label="Name" value="{{profile.name}}"></paper-input>
+                </div>
+                <div layout center-justified horizontal>
+                    <paper-input class="custom" floatingLabel label="Host" value="{{profile.host}}"></paper-input>
+                </div>
+                <div layout center-justified horizontal>
+                    <paper-input class="custom" floatingLabel label="Port" value="{{profile.port}}"></paper-input>
+                </div>
+                <div layout center-justified horizontal>
+                    <paper-input class="custom" floatingLabel label="Password" value="{{profile.password}}"></paper-input>
+                </div>
+                <div layout center-justified horizontal>
+                    <paper-input class="custom" floatingLabel label="DB" value="{{profile.db}}"></paper-input>
+                </div>
+                <div layout center-justified horizontal class="button-section">
+                    <paper-button on-click="{{submitProfile}}" raised>OK</paper-button>
+                    <paper-button on-click="{{cancel}}">Cancel</paper-button>
+                </div>
+            </section>
+        </core-animated-pages>
+
+        <core-signals on-core-signal-to-edit-profile-panel="{{loadData}}"></core-signals>
+    </template>
+    <script>
+        Polymer({
+            profile: {},
+            data: null,
+            selected: 0,
+            ready: function () {
+            },
+            loadData: function(e, detail, sender) {
+                this.data = detail;
+                this.profile.id = detail.id;
+                this.profile.type = detail.type;
+                this.profile.name = detail.name;
+                this.profile.host = detail.host;
+                this.profile.port = detail.port;
+                this.profile.password = detail.password;
+
+                if (detail.type === 'Redis') {
+                    this.profile.db = detail.db;
+                }
+            },
+            submitProfile: function () {
+                if (this.profile.name === "" ||
+                        this.profile.host === "" ||
+                        this.profile.port === ""
+                ) {
+                    this.unfinishedToast();
+                    return;
+                }
+                if (this.profile.type === "Redis" && this.profile.db === "") {
+                    this.unfinishedToast();
+                    return;
+                }
+
+                for(var name in this.profile) {
+                    this.data[name] = this.profile[name];
+                }
+
+                this.asyncFire("core-signal", {name: "submit-edit-profile"});
+
+                this.reset();
+                this.closePanel();
+            },
+            reset: function () {
+                this.profile.id = '';
+                this.profile.type = '';
+                this.profile.name = '';
+                this.profile.host = '';
+                this.profile.port = '';
+                this.profile.password = '';
+                this.profile.db = '';
+
+                this.data = null;
+            },
+            cancel: function () {
+                this.reset();
+                this.closePanel();
+            },
+            closePanel: function () {
+                this.asyncFire("core-signal", {name: "to-observer-panel"});
+            },
+            unfinishedToast: function () {
+                this.asyncFire("core-signal", {name: "toast", data: "Please finish the empty option."});
+            }
+        });
+    </script>
+</polymer-element>
