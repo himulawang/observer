@@ -5,14 +5,17 @@
  * @see http://developer.chrome.com/apps/app.window.html
  */
 chrome.app.runtime.onLaunched.addListener(function() {
-  chrome.app.window.create(
-    "build.html",
-    {
-      id: "mainWindow",
-      bounds: {
-        width: 500,
-        height: 300
-      },
-    }
-  );
+    chrome.app.window.create(
+        "build.html",
+        {
+            id: "mainWindow",
+            frame: 'none',
+            bounds: {
+                width: 500,
+                height: 300,
+            },
+            minWidth: 200,
+            minHeight: 300,
+        }
+    );
 });

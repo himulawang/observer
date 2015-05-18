@@ -9,13 +9,18 @@ class Monitor {
 
     get profile() { return this._profile; }
     get socketID() { return this._socketID; }
+    get title() { return this._title; }
 
     get logs() { return this._logs; }
 
     set profile(v) { this._profile = v; }
     set socketID(v) { this._socketID = v; }
+    set title(v) { this._title = v; }
 
     append(content) {
+        while(this.logs.length >= CoreStyle.g.logLimitation) {
+            this._logs.pop();
+        }
         content = this.parseTimeLog(content);
         this._logs.unshift(content);
     }

@@ -2,25 +2,29 @@
 <link rel="import" href="../bower_components/core-style/core-style.html">
 <link rel="import" href="../bower_components/core-header-panel/core-header-panel.html"/>
 <link rel="import" href="../bower_components/core-toolbar/core-toolbar.html"/>
+<link rel="import" href="../bower_components/core-menu/core-menu.html"/>
 
+<link rel="import" href="../bower_components/paper-icon-button/paper-icon-button.html">
 <link rel="import" href="../bower_components/paper-button/paper-button.html">
 <link rel="import" href="../bower_components/paper-menu-button/paper-menu-button.html">
 <link rel="import" href="../bower_components/paper-dropdown/paper-dropdown.html">
 <link rel="import" href="../bower_components/paper-item/paper-item.html">
+<link rel="import" href="../bower_components/paper-dialog/paper-action-dialog.html">
 
 
 <core-style id="monitor-matrix">
     :host {
         display: inline-block;
-        height: 230px;
-        width: calc({{ 100 / g.columns }}% - 10px);
-        margin: 2px;
+        height: {{g.height}};
+        width: calc({{ 100 / g.columns }}% - 3px);
         -webkit-user-select: text;
+        border-bottom: 1px solid #424242;
     }
 </core-style>
 
 <script>
     CoreStyle.g.columns = 3;
+    CoreStyle.g.height = "230px";
 </script>
 
 <polymer-element name="monitor-matrix" attributes="monitor" monitor="{{monitor}}">
@@ -46,22 +50,43 @@
                 transition: height 0.2s;
                 padding-left: 10px;
             }
+
+            .custom /deep/ .floated-label .label-text {
+                color: #424242;
+            }
+            .custom[focused] /deep/ .floated-label .label-text {
+                color: #ff4081;
+            }
+
+            .custom /deep/ .focused-underline {
+                background-color: #ff4081;
+            }
+
+            .custom {
+                color: #212121;
+                font-size: 16px;
+            }
+
+            paper-button::shadow #ripple {
+                color: #ff4081;
+            }
         </style>
         <core-style ref="monitor-matrix"></core-style>
         <core-header-panel mode="seamed">
             <div class="core-header" layout horizontal>
-                <span flex>{{monitor.profile.name}}</span>
-                <span>
+                <div flex>{{monitor.title}}</div>
+                <div>
                     <paper-menu-button>
                         <paper-icon-button icon="menu" noink></paper-icon-button>
                         <paper-dropdown class="dropdown" layered>
                             <core-menu>
+                                <paper-item noink on-click="{{openRenameDialog}}">Rename</paper-item>
                                 <paper-item noink on-click="{{close}}">Close</paper-item>
                                 <paper-item noink on-click="{{clear}}">Clear</paper-item>
                             </core-menu>
                         </paper-dropdown>
                     </paper-menu-button>
-                </span>
+                </div>
             </div>
             <section>
                 <template repeat="{{log in monitor.logs}}">
@@ -69,15 +94,23 @@
                 </template>
             </section>
         </core-header-panel>
+        <paper-action-dialog backdrop layered="false" heading="Rename" id="dialog" transition="core-transition-top">
+            <div>
+                <paper-input class="custom" floatingLabel label="Title" value="{{monitor.title}}"></paper-input>
+            </div>
+        </paper-action-dialog>
     </template>
     <script>
         Polymer({
             monitor: null,
-            clear: function () {
+            clear: function() {
                 this.monitor.clear();
             },
             close: function() {
                 this.asyncFire('core-signal', {name: "close-monitor", data: this.monitor});
+            },
+            openRenameDialog: function() {
+                this.$.dialog.open();
             },
         });
     </script>

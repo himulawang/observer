@@ -16,7 +16,6 @@
         #main {
             overflow-y: auto;
         }
-
         #drawer {
             background-color: white;
         }
@@ -38,9 +37,11 @@
     <core-signals on-core-signal-to-new-profile-panel="{{toNewProfilePanel}}"></core-signals>
     <core-signals on-core-signal-to-observer-panel="{{toObserverPanel}}"></core-signals>
     <core-signals on-core-signal-to-edit-profile-panel="{{toEditProfilePanel}}"></core-signals>
+    <core-signals on-core-signal-toggle-drawer="{{toggleDrawer}}"></core-signals>
     <core-signals on-core-signal-toast="{{toast}}"></core-signals>
 
-    <core-a11y-keys target="{{parentElement}}" keys="f5" on-keys-pressed="{{toggleDrawer}}"></core-a11y-keys>
+    <core-a11y-keys target="{{parentElement}}" keys="f5" on-keys-pressed="{{toggleSetting}}"></core-a11y-keys>
+    <core-a11y-keys target="{{parentElement}}" keys="f6" on-keys-pressed="{{toggleDrawer}}"></core-a11y-keys>
 
 </template>
 <script>
@@ -68,8 +69,11 @@
             this.$.toast.text = detail;
             this.$.toast.show();
         },
-        toggleDrawer: function(e, detail, sender) {
+        toggleDrawer: function() {
             this.$.panel.togglePanel();
+        },
+        toggleSetting: function() {
+            this.asyncFire("core-signal", {name: "toggle-setting-panel", data: null});
         }
     });
 </script>

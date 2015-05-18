@@ -10,6 +10,8 @@
 <link rel="import" href="../bower_components/paper-menu-button/paper-menu-button.html">
 <link rel="import" href="../bower_components/paper-dropdown/paper-dropdown.html">
 <link rel="import" href="../bower_components/paper-item/paper-item.html">
+<link rel="import" href="../bower_components/paper-slider/paper-slider.html">
+<link rel="import" href="../bower_components/paper-dialog/paper-action-dialog.html">
 
 <polymer-element name="side-bar">
     <template>
@@ -24,34 +26,81 @@
             .core-header {
                 border-right: 1px solid #fafafa;
             }
-
+            #toolbar-header {
+                -webkit-app-region: drag;
+            }
             .content {
-                font-size: 16px;
+                font-size: 14px;
             }
             .profile {
                 cursor: pointer;
             }
+            paper-slider {
+                cursor: pointer;
+            }
+            paper-slider::shadow #sliderBar::shadow #activeProgress {
+                background-color: #ff4081;
+            }
+            paper-slider::shadow #sliderKnobInner {
+                background-color: #ff4081;
+            }
+            paper-slider::shadow #sliderKnobInner::before {
+                background-color: #ff4081;
+            }
+            paper-slider::shadow #sliderKnob > #sliderKnobInner::after {
+                color: #f1f1f1;
+            }
+            paper-slider::shadow #sliderBar::shadow #secondaryProgress {
+                background-color: #ff4081;
+            }
+            .custom /deep/ .floated-label .label-text {
+                color: #424242;
+            }
+
+            .custom[focused] /deep/ .floated-label .label-text {
+                color: #ff4081;
+            }
+
+            .custom /deep/ .focused-underline {
+                background-color: #ff4081;
+            }
+
+            .custom {
+                color: #212121;
+            }
         </style>
+
         <style shim-shadowdom>
             core-toolbar {
                 background-color: #424242;
                 color: #fafafa;
             }
-
             core-toolbar.dark-theme {
                 background-color: #212121;
                 color: #f1f1f1;
                 fill: #f1f1f1;
             }
-
         </style>
 
         <core-header-panel>
             <div class="core-header">
                 <core-toolbar>
-                    <core-icon-button icon="menu">
-                    </core-icon-button>
-                    <span flex>Toolbar</span>
+                    <paper-menu-button>
+                        <paper-icon-button icon="menu" noink></paper-icon-button>
+                        <paper-dropdown class="dropdown" layered>
+                            <core-menu>
+                                <paper-item noink on-click="{{openSettingPanel}}">
+                                    <core-icon icon="settings"></core-icon>
+                                    Setting
+                                </paper-item>
+                                <paper-item noink on-click="{{exitApp}}">
+                                    <core-icon icon="exit-to-app"></core-icon>
+                                    Exit
+                                </paper-item>
+                            </core-menu>
+                        </paper-dropdown>
+                    </paper-menu-button>
+                    <span flex id="toolbar-header">Toolbar</span>
                     <core-icon-button icon="add" on-click="{{toNewProfilePanel}}"></core-icon-button>
                 </core-toolbar>
             </div>
@@ -84,10 +133,28 @@
             </div>
         </core-header-panel>
 
+        <paper-action-dialog layered="false" heading="Setting" id="setting-dialog" transition="core-transition-center">
+            <div>
+                Columns: <paper-slider pin snaps min="1" max="5" step="1" value="{{setting.columns}}" on-change="{{columnSettingChange}}"></paper-slider>
+            </div>
+            <div>
+                Height: <paper-slider pin snaps min="200" max="1000" step="50" value="{{setting.heightNoUnit}}" on-change="{{heightSettingChange}}"></paper-slider>
+            </div>
+            <div>
+                <paper-input floatingLabel
+                             id="log-limitation"
+                             label="Log Limitation"
+                             on-change="{{logLimitationSettingChange}}"
+                             class="custom"></paper-input>
+            </div>
+        </paper-action-dialog>
+
         <core-signals on-core-signal-submit-new-profile="{{submitNewProfile}}"></core-signals>
         <core-signals on-core-signal-submit-edit-profile="{{submitEditProfile}}"></core-signals>
 
         <core-signals on-core-signal-disconnect="{{disconnect}}"></core-signals>
+
+        <core-signals on-core-signal-toggle-setting-panel="{{toggleSettingPanel}}"></core-signals>
 
     </template>
     <script>
@@ -95,10 +162,19 @@
            profileList: new ProfileList(),
            profileNodeList: [],
            monitorList: new MonitorList(),
+           setting: null,
            ready: function() {
                ProfileListStore.get().then(function (profileList) {
                    this.profileList = profileList;
                    this.profileNodeList = profileList.nodeList();
+               }.bind(this));
+               SettingStore.get().then(function(setting) {
+                   this.setting = setting;
+                   CoreStyle.g.columns = setting.columns;
+                   CoreStyle.g.height = setting.height;
+                   CoreStyle.g.logLimitation = setting.logLimitation;
+
+                   this.$['log-limitation'].value = setting.logLimitation;
                }.bind(this));
 
                chrome.sockets.tcp.onReceive.addListener(function(info) {
@@ -135,6 +211,7 @@
                            var monitor = new Monitor();
                            monitor.socketID = socketID;
                            monitor.profile = profile;
+                           monitor.title = profile.name;
 
                            this.monitorList.add(monitor);
                            this.asyncFire('core-signal', {name: 'new-monitor', data: monitor});
@@ -190,33 +267,60 @@
                    this.profileList.add(detail);
                }
 
-               ProfileListStore.update(this.profileList).then(function() {
-                   console.log('done save');
-               });
-
+               this.saveProfileList();
                this.refreshNode();
            },
            submitEditProfile: function(e, detail, sender) {
-               ProfileListStore.update(this.profileList).then(function() {
-                   console.log('done edit');
-               });
-
+               this.saveProfileList();
                this.refreshNode();
            },
            deleteProfile: function(e, detail, sender) {
                var id = sender.dataset.id;
 
                this.profileList.del(id);
-               ProfileListStore.update(this.profileList).then(function() {
-                   console.log('done delete');
-               });
-
+               this.saveProfileList();
                this.refreshNode();
            },
            editProfile: function(e, detail, sender) {
                var id = sender.dataset.id;
 
                this.asyncFire('core-signal', {name: 'to-edit-profile-panel', data: this.profileList.get(id)});
+           },
+           exitApp: function() {
+               window.close();
+           },
+           openSettingPanel: function() {
+               this.asyncFire('core-signal', {name: 'toggle-drawer', data: null});
+               this.$["setting-dialog"].open();
+           },
+           toggleSettingPanel: function() {
+               this.$["setting-dialog"].toggle();
+           },
+           columnSettingChange: function(e, detail, sender) {
+               this.setting.columns = sender.value;
+               CoreStyle.g.columns = this.setting.columns;
+               this.saveSetting();
+           },
+           heightSettingChange: function(e, detail, sender) {
+               this.setting.height = sender.value;
+               CoreStyle.g.height = this.setting.height;
+               this.saveSetting();
+           },
+           logLimitationSettingChange: function(e, detail, sender) {
+               if (!Util.isInt(sender.value)) {
+                   this.setting.logLimitation = 500;
+               } else {
+                   this.setting.logLimitation = sender.value;
+               }
+               this.$['log-limitation'].value = this.setting.logLimitation;
+               CoreStyle.g.logLimitation = this.setting.logLimitation;
+               this.saveSetting();
+           },
+           saveSetting: function() {
+               SettingStore.set(this.setting);
+           },
+           saveProfileList: function() {
+               ProfileListStore.update(this.profileList);
            }
        });
     </script>
