@@ -68,6 +68,7 @@
             .custom {
                 color: #212121;
             }
+
         </style>
 
         <style shim-shadowdom>
@@ -89,6 +90,14 @@
                         <paper-icon-button icon="menu" noink></paper-icon-button>
                         <paper-dropdown class="dropdown" layered>
                             <core-menu>
+                                <paper-item noink on-click="{{openImportPanel}}">
+                                    <core-icon icon="file-upload"></core-icon>
+                                    Import
+                                </paper-item>
+                                <paper-item noink on-click="{{openExportPanel}}">
+                                    <core-icon icon="file-download"></core-icon>
+                                    Export
+                                </paper-item>
                                 <paper-item noink on-click="{{openSettingPanel}}">
                                     <core-icon icon="settings"></core-icon>
                                     Setting
@@ -160,6 +169,25 @@
                              label="Log Limitation"
                              on-change="{{logLimitationSettingChange}}"
                              class="custom"></paper-input>
+            </div>
+        </paper-action-dialog>
+
+        <paper-action-dialog layered="false" heading="Import" id="import-dialog" transition="core-transition-top">
+            <div>Importing data will cause all existing data lost, and restart the application.</div>
+            <div>Please be cauction!</div>
+            <div>
+                <textarea cols="30" rows="8" id="import-textarea"></textarea>
+            </div>
+            <div>
+                <paper-button on-click="{{importDB}}" raised>OK</paper-button>
+            </div>
+        </paper-action-dialog>
+
+        <paper-action-dialog layered="false" heading="Export" id="export-dialog"
+                             transition="core-transition-center"
+                             on-core-overlay-open-completed="{{onOpenExportPanel}}">
+            <div>
+                <textarea cols="30" rows="8" id="export-textarea" readonly="readonly"></textarea>
             </div>
         </paper-action-dialog>
 
@@ -364,6 +392,36 @@
            openSettingPanel: function() {
                this.asyncFire('core-signal', {name: 'toggle-drawer', data: null});
                this.$["setting-dialog"].open();
+           },
+           openImportPanel: function() {
+               this.asyncFire('core-signal', {name: 'toggle-drawer', data: null});
+               this.$["import-dialog"].open();
+           },
+           importDB: function() {
+               var el = this.$['import-textarea'];
+               try {
+                   var data = JSON.parse(el.value);
+               } catch (e) {
+                   this.asyncFire("core-signal", {name: "toast", data: "Invalid import content."});
+               }
+
+               DBStore.importDB(data).then(function() {
+                   chrome.runtime.reload();
+               });
+           },
+           openExportPanel: function() {
+               this.asyncFire('core-signal', {name: 'toggle-drawer', data: null});
+               this.$["export-dialog"].open();
+           },
+           onOpenExportPanel: function() {
+               DBStore.exportDB().then(function(data) {
+                   var el = this.$['export-textarea'];
+                   el.value = JSON.stringify(data);
+                   el.focus();
+                   el.selectionStart = 0;
+                   el.selectionEnd = el.value.length;
+                   document.execCommand('copy');
+               }.bind(this));
            },
            toggleSettingPanel: function() {
                this.$["setting-dialog"].toggle();
