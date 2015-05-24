@@ -56,6 +56,7 @@
         <paper-tabs selected="{{selected}}" id="tabs">
             <paper-tab role="tab" class="core-selected">Redis</paper-tab>
             <paper-tab role="tab">Multiple Redis</paper-tab>
+            <paper-tab role="tab">SSH</paper-tab>
         </paper-tabs>
 
         <core-animated-pages selected="{{selected}}" transitions="slide-from-right">
@@ -104,6 +105,30 @@
                     <paper-button on-click="{{cancel}}">Cancel</paper-button>
                 </div>
             </section>
+            <section>
+                <div layout center-justified horizontal>
+                    <paper-input class="custom" floatingLabel label="Name" value="{{ssh.name}}"></paper-input>
+                </div>
+                <div layout center-justified horizontal>
+                    <paper-input class="custom" floatingLabel label="Host" value="{{ssh.host}}"></paper-input>
+                </div>
+                <div layout center-justified horizontal>
+                    <paper-input class="custom" floatingLabel label="Port" value="{{ssh.port}}"></paper-input>
+                </div>
+                <div layout center-justified horizontal>
+                    <paper-input class="custom" floatingLabel label="User" value="{{ssh.user}}"></paper-input>
+                </div>
+                <div layout center-justified horizontal>
+                    <paper-input class="custom" floatingLabel label="Password" value="{{ssh.password}}"></paper-input>
+                </div>
+                <div layout center-justified horizontal>
+                    <paper-input class="custom" floatingLabel label="FilePath" value="{{ssh.filePath}}"></paper-input>
+                </div>
+                <div layout center-justified horizontal class="button-section">
+                    <paper-button on-click="{{submitSSH}}" raised>OK</paper-button>
+                    <paper-button on-click="{{cancel}}">Cancel</paper-button>
+                </div>
+            </section>
         </core-animated-pages>
 
     </template>
@@ -111,6 +136,7 @@
         Polymer({
             redis: {},
             multipleRedis: {},
+            ssh: {},
             selected: 0,
             ready: function() {
             },
@@ -125,14 +151,14 @@
                 }
 
                 IDStore.incr(1).then(function (id) {
-                    var redis = new RedisProfile();
-                    redis.id = id;
-                    redis.name = this.redis.name;
-                    redis.host = this.redis.host;
-                    redis.port = this.redis.port;
-                    redis.password = this.redis.password;
-                    redis.db = this.redis.db;
-                    this.asyncFire("core-signal", {name: "submit-new-profile", data: redis});
+                    var profile = new RedisProfile();
+                    profile.id = id;
+                    profile.name = this.redis.name;
+                    profile.host = this.redis.host;
+                    profile.port = this.redis.port;
+                    profile.password = this.redis.password;
+                    profile.db = this.redis.db;
+                    this.asyncFire("core-signal", {name: "submit-new-profile", data: profile});
 
                     this.reset();
                     this.closePanel();
@@ -163,18 +189,45 @@
                 IDStore.incr(cnt).then(function (id) {
                     var list = [];
                     for(var i = 0; i < cnt; ++i) {
-                        var redis = new RedisProfile();
+                        var profile = new RedisProfile();
                         var port = fromPort + i;
-                        redis.id = id + i;
-                        redis.name = multipleRedis.name + ':' + port;
-                        redis.host = multipleRedis.host;
-                        redis.port = port;
-                        redis.password = multipleRedis.password;
-                        redis.db = multipleRedis.db;
+                        profile.id = id + i;
+                        profile.name = multipleRedis.name + ':' + port;
+                        profile.host = multipleRedis.host;
+                        profile.port = port;
+                        profile.password = multipleRedis.password;
+                        profile.db = multipleRedis.db;
 
-                        list.push(redis);
+                        list.push(profile);
                     }
                     this.asyncFire("core-signal", {name: "submit-new-profile", data: list});
+                    this.reset();
+                    this.closePanel();
+                }.bind(this));
+            },
+            submitSSH: function() {
+                if (this.ssh.name === "" ||
+                        this.ssh.host === "" ||
+                        this.ssh.port === "" ||
+                        this.ssh.user === "" ||
+                        this.ssh.password === "" ||
+                        this.ssh.filePath === ""
+                ) {
+                    this.unfinishedToast();
+                    return;
+                }
+
+                IDStore.incr(1).then(function (id) {
+                    var profile = new SSHProfile();
+                    profile.id = id;
+                    profile.name = this.ssh.name;
+                    profile.host = this.ssh.host;
+                    profile.port = this.ssh.port;
+                    profile.user = this.ssh.user;
+                    profile.password = this.ssh.password;
+                    profile.filePath = this.ssh.filePath;
+                    this.asyncFire("core-signal", {name: "submit-new-profile", data: profile});
+
                     this.reset();
                     this.closePanel();
                 }.bind(this));
@@ -192,6 +245,13 @@
                 this.multipleRedis.toPort = '';
                 this.multipleRedis.password = '';
                 this.multipleRedis.db = '';
+
+                this.ssh.name = '';
+                this.ssh.host = '';
+                this.ssh.port = 22;
+                this.ssh.user = '';
+                this.ssh.password = '';
+                this.ssh.filePath = '';
             },
             cancel: function() {
                 this.reset();

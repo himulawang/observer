@@ -4,10 +4,12 @@
 <link rel="import" href="../bower_components/core-a11y-keys/core-a11y-keys.html">
 
 <link rel="import" href="../bower_components/paper-toast/paper-toast.html">
+<link rel="import" href="../bower_components/paper-button/paper-button.html">
 
 <link rel="import" href="side_bar.html"/>
 <link rel="import" href="new_profile_panel.html"/>
-<link rel="import" href="edit_profile_panel.html"/>
+<link rel="import" href="edit_redis_profile_panel.html"/>
+<link rel="import" href="edit_ssh_profile_panel.html"/>
 <link rel="import" href="observer_panel.html"/>
 
 <polymer-element name="app-main">
@@ -28,7 +30,8 @@
         <div main id="main">
             <observer-panel id="observerPanel"></observer-panel>
             <new-profile-panel id="newProfilePanel"></new-profile-panel>
-            <edit-profile-panel id="editProfilePanel"></edit-profile-panel>
+            <edit-redis-profile-panel id="editRedisProfilePanel"></edit-redis-profile-panel>
+            <edit-ssh-profile-panel id="editSSHProfilePanel"></edit-ssh-profile-panel>
         </div>
     </core-drawer-panel>
 
@@ -36,7 +39,8 @@
 
     <core-signals on-core-signal-to-new-profile-panel="{{toNewProfilePanel}}"></core-signals>
     <core-signals on-core-signal-to-observer-panel="{{toObserverPanel}}"></core-signals>
-    <core-signals on-core-signal-to-edit-profile-panel="{{toEditProfilePanel}}"></core-signals>
+    <core-signals on-core-signal-to-edit-redis-profile-panel="{{toEditRedisProfilePanel}}"></core-signals>
+    <core-signals on-core-signal-to-edit-ssh-profile-panel="{{toEditSSHProfilePanel}}"></core-signals>
     <core-signals on-core-signal-toggle-drawer="{{toggleDrawer}}"></core-signals>
     <core-signals on-core-signal-toast="{{toast}}"></core-signals>
 
@@ -46,24 +50,38 @@
 </template>
 <script>
     Polymer({
+        handler: null,
+        panelList: [
+            'newProfilePanel',
+            'editRedisProfilePanel',
+            'editSSHProfilePanel',
+            'observerPanel',
+        ],
         ready: function() {
             this.$.newProfilePanel.hidden = true;
-            this.$.editProfilePanel.hidden = true;
+            this.$.editRedisProfilePanel.hidden = true;
+            this.$.editSSHProfilePanel.hidden = true;
+        },
+        _toPanel: function(name) {
+            this.panelList.map(function(el) {
+                if (el === name) {
+                    this.$[el].hidden = false;
+                } else {
+                    this.$[el].hidden = true;
+                }
+            }.bind(this));
         },
         toNewProfilePanel: function(e, detail, sender) {
-            this.$.newProfilePanel.hidden = false;
-            this.$.editProfilePanel.hidden = true;
-            this.$.observerPanel.hidden = true;
+            this._toPanel('newProfilePanel');
         },
-        toEditProfilePanel: function(e, detail, sender) {
-            this.$.newProfilePanel.hidden = true;
-            this.$.editProfilePanel.hidden = false;
-            this.$.observerPanel.hidden = true;
+        toEditRedisProfilePanel: function(e, detail, sender) {
+            this._toPanel('editRedisProfilePanel');
+        },
+        toEditSSHProfilePanel: function(e, detail, sender) {
+            this._toPanel('editSSHProfilePanel');
         },
         toObserverPanel: function(e, detail, sender) {
-            this.$.newProfilePanel.hidden = true;
-            this.$.editProfilePanel.hidden = true;
-            this.$.observerPanel.hidden = false;
+            this._toPanel('observerPanel');
         },
         toast: function(e, detail, sender) {
             this.$.toast.text = detail;
@@ -74,7 +92,7 @@
         },
         toggleSetting: function() {
             this.asyncFire("core-signal", {name: "toggle-setting-panel", data: null});
-        }
+        },
     });
 </script>
 </polymer-element>

@@ -2,7 +2,7 @@
  * Created by ila on 5/9/2015.
  */
 "use strict"
-class Monitor {
+class RedisMonitor {
     constructor() {
         this._logs = [];
     }

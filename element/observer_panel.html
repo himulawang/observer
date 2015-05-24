@@ -41,7 +41,11 @@
                 var index = this.monitorNodeList.indexOf(detail);
 
                 this.monitorNodeList.splice(index, 1);
-                this.asyncFire('core-signal', {name: "disconnect", data: monitor});
+                if (monitor.profile.type === 'Redis') {
+                    this.asyncFire('core-signal', {name: "disconnect-redis", data: monitor});
+                } else if (monitor.profile.type === 'SSH') {
+                    this.asyncFire('core-signal', {name: "disconnect-ssh", data: monitor});
+                }
             }
         });
     </script>

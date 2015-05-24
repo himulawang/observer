@@ -4,34 +4,42 @@
 "use strict"
 class ProfileList {
     constructor(listArr) {
-        this._list = new Map();
+        this._redisList = new Map();
 
         if (Array.isArray(listArr)) this.fromArray(listArr);
     }
 
     add(profile) {
-        this._list.set(profile.id, profile);
+        this._redisList.set(profile.id, profile);
     }
 
     del(id) {
-        return this._list.delete(id);
+        return this._redisList.delete(id);
     }
 
     get(id) {
-        return this._list.get(id);
+        return this._redisList.get(id);
     }
 
-    nodeList() {
+    redisProfileNodeList() {
         let nodeList = [];
-        for (let profile of this._list.values()) {
-            nodeList.push(profile);
+        for (let profile of this._redisList.values()) {
+            if (profile.type === 'Redis') nodeList.push(profile);
+        }
+        return nodeList;
+    }
+
+    sshProfileNodeList() {
+        let nodeList = [];
+        for (let profile of this._redisList.values()) {
+            if (profile.type === 'SSH') nodeList.push(profile);
         }
         return nodeList;
     }
 
     toArray() {
         let listArr = [];
-        for(let profile of this._list.values()) {
+        for(let profile of this._redisList.values()) {
             listArr.push(profile.toArray());
         }
         return listArr;
@@ -42,6 +50,8 @@ class ProfileList {
             let arr = listArr[i];
             if (arr['type'] === 'Redis') {
                 this.add(new RedisProfile(arr));
+            } else if (arr['type'] === 'SSH') {
+                this.add(new SSHProfile(arr));
             }
         }
     }

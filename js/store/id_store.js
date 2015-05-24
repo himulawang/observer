@@ -16,7 +16,7 @@ class IDStore {
                     }
 
                     // incr
-                    let newV = v + step;
+                    let newV = parseInt(v) + step;
                     localforage.setItem(KEY, newV).then(function () {
                         resolve(newV);
                     });

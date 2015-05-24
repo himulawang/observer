@@ -8,7 +8,7 @@
 <link rel="import" href="../bower_components/paper-input/paper-input.html">
 <link rel="import" href="../bower_components/paper-button/paper-button.html">
 
-<polymer-element name="edit-profile-panel">
+<polymer-element name="edit-redis-profile-panel">
     <template>
         <style>
             paper-tabs {
@@ -58,28 +58,28 @@
         </style>
 
         <paper-tabs selected="{{selected}}" id="tabs">
-            <paper-tab role="tab" class="core-selected">Edit</paper-tab>
+            <paper-tab role="tab" class="core-selected">Edit Redis Profile</paper-tab>
         </paper-tabs>
 
         <core-animated-pages selected="{{selected}}" transitions="slide-from-right">
             <section>
                 <div layout center-justified horizontal>
-                    <paper-input class="custom" floatingLabel label="Type" value="{{profile.type}}" disabled></paper-input>
+                    <paper-input class="custom" floatingLabel label="Type" value="{{profileForEditing.type}}" disabled></paper-input>
                 </div>
                 <div layout center-justified horizontal>
-                    <paper-input class="custom" floatingLabel label="Name" value="{{profile.name}}"></paper-input>
+                    <paper-input class="custom" floatingLabel label="Name" value="{{profileForEditing.name}}"></paper-input>
                 </div>
                 <div layout center-justified horizontal>
-                    <paper-input class="custom" floatingLabel label="Host" value="{{profile.host}}"></paper-input>
+                    <paper-input class="custom" floatingLabel label="Host" value="{{profileForEditing.host}}"></paper-input>
                 </div>
                 <div layout center-justified horizontal>
-                    <paper-input class="custom" floatingLabel label="Port" value="{{profile.port}}"></paper-input>
+                    <paper-input class="custom" floatingLabel label="Port" value="{{profileForEditing.port}}"></paper-input>
                 </div>
                 <div layout center-justified horizontal>
-                    <paper-input class="custom" floatingLabel label="Password" value="{{profile.password}}"></paper-input>
+                    <paper-input class="custom" floatingLabel label="Password" value="{{profileForEditing.password}}"></paper-input>
                 </div>
                 <div layout center-justified horizontal>
-                    <paper-input class="custom" floatingLabel label="DB" value="{{profile.db}}"></paper-input>
+                    <paper-input class="custom" floatingLabel label="DB" value="{{profileForEditing.db}}"></paper-input>
                 </div>
                 <div layout center-justified horizontal class="button-section">
                     <paper-button on-click="{{submitProfile}}" raised>OK</paper-button>
@@ -88,60 +88,52 @@
             </section>
         </core-animated-pages>
 
-        <core-signals on-core-signal-to-edit-profile-panel="{{loadData}}"></core-signals>
+        <core-signals on-core-signal-to-edit-redis-profile-panel="{{loadData}}"></core-signals>
     </template>
     <script>
         Polymer({
-            profile: {},
-            data: null,
+            profileForEditing: {},
+            profile: null,
             selected: 0,
-            ready: function () {
-            },
             loadData: function(e, detail, sender) {
-                this.data = detail;
-                this.profile.id = detail.id;
-                this.profile.type = detail.type;
-                this.profile.name = detail.name;
-                this.profile.host = detail.host;
-                this.profile.port = detail.port;
-                this.profile.password = detail.password;
-
-                if (detail.type === 'Redis') {
-                    this.profile.db = detail.db;
-                }
+                this.profile = detail;
+                this.profileForEditing.id = detail.id;
+                this.profileForEditing.type = detail.type;
+                this.profileForEditing.name = detail.name;
+                this.profileForEditing.host = detail.host;
+                this.profileForEditing.port = detail.port;
+                this.profileForEditing.password = detail.password;
+                this.profileForEditing.db = detail.db;
             },
             submitProfile: function () {
-                if (this.profile.name === "" ||
-                        this.profile.host === "" ||
-                        this.profile.port === ""
+                if (this.profileForEditing.name === "" ||
+                        this.profileForEditing.host === "" ||
+                        this.profileForEditing.port === "" ||
+                        this.profileForEditing.db === ""
                 ) {
                     this.unfinishedToast();
                     return;
                 }
-                if (this.profile.type === "Redis" && this.profile.db === "") {
-                    this.unfinishedToast();
-                    return;
+
+                for(var name in this.profileForEditing) {
+                    this.profile[name] = this.profileForEditing[name];
                 }
 
-                for(var name in this.profile) {
-                    this.data[name] = this.profile[name];
-                }
-
-                this.asyncFire("core-signal", {name: "submit-edit-profile"});
+                this.asyncFire("core-signal", {name: "submit-edit-redis-profile"});
 
                 this.reset();
                 this.closePanel();
             },
             reset: function () {
-                this.profile.id = '';
-                this.profile.type = '';
-                this.profile.name = '';
-                this.profile.host = '';
-                this.profile.port = '';
-                this.profile.password = '';
-                this.profile.db = '';
+                this.profileForEditing.id = '';
+                this.profileForEditing.type = '';
+                this.profileForEditing.name = '';
+                this.profileForEditing.host = '';
+                this.profileForEditing.port = '';
+                this.profileForEditing.password = '';
+                this.profileForEditing.db = '';
 
-                this.data = null;
+                this.profile = null;
             },
             cancel: function () {
                 this.reset();
